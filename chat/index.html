@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>しりとり王</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="tittle">
+        <img src="img/king.png" alt="王">
+        <header>しりとり王</header>
+        <img src="img/king.png" alt="王">
+    </div>
+
+    <div class="poswrap">
+        <section class="sec1">
+            <!-- ユーザー名入力欄 -->
+            <div class="name">名前<input type="text" id="username"></div>
+            
+            <div class="input">
+                <!-- 文字を描くエリア -->
+                <div class="wrap">
+                    <canvas id="mycanvas"></canvas>
+
+                    <p>ひらがな／カタカナ入力</p>
+
+                    <!-- 送信ボタン / クリアボタン -->
+                    <div class="btn">
+                        <button id="send">送信</button>
+                        <button id="clear">クリア</button>
+                    </div>
+                </div>
+            </div>
+
+            <!--  メッセージ表示 -->
+            <div class="wrap_img">
+                <img class="ret_img" width="500">
+                <div class="msg"></div>
+            </div>
+        </section>
+        
+        <section class="sec2">
+            <!-- チャット文字をリスト表示 -->
+            <div class="History">
+                <p>履歴</p>
+                <ul id="output">
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <!-- CDNでJavaScriptを読み込み -->
+    <script src="https://unpkg.com/vue@3.0.0/dist/vue.global.prod.js"></script>
+    <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
+
+    <!-- 以下JavaScript領域 -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src='js/canvas.js'></script>
+
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.2/firebase.js"></script>
+
+    <!-- TODO: Add SDKs for Firebase products that you want to use
+        https://firebase.google.com/docs/web/setup#available-libraries -->
+
+    <script>
+        // Your web app's Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyANTaOPdE98af_XHQ9q588aLH-REbHiMjo",
+            authDomain: "dev20chat-26b76.firebaseapp.com",
+            databaseURL: "https://dev20chat-26b76-default-rtdb.firebaseio.com",
+            projectId: "dev20chat-26b76",
+            storageBucket: "dev20chat-26b76.appspot.com",
+            messagingSenderId: "930819499922",
+            appId: "1:930819499922:web:354adb0f5d6049b824834b"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // 送受信準備
+        let newPostRef = firebase.database().ref();
+
+        // 送信処理
+        $('#send').on('click',function(){
+            const imageZone = document.getElementById('mycanvas');
+            Tesseract.recognize(imageZone, 'jpn', { logger: m => console.log(m) }).then(({ data: { text } }) => {
+                
+                newPostRef.push({
+                    username: $('#username').val(),
+                    text: text
+                });
+                click_clear();
+            })
+
+            $('#username').val('');
+        });
+
+        //受信処理
+        newPostRef.on('child_added',function(data){
+            let v = data.val();
+            let k = data.key;
+            let str = `<li>${v.username}<br>${v.text}</li>`;
+            $('#output').append(str);
+
+            let vText = v.text.trim();
+            let safe = $('.msg').text();
+            let ret = vText.slice(-1);
+            console.log(vText);
+            console.log(ret);
+
+            if (ret==='ん' || ret==='ン'){
+                $('.msg').empty();
+                $('.msg').append('アウト！');
+                $('.ret_img').attr('src', 'img/out.png');
+            } else if (ret!='ん' || ret!='ン') {
+                if(vText!='' && safe!='セーフ！'){
+                    $('.msg').empty();
+                    $('.msg').append('セーフ！');
+                    $('.ret_img').attr('src', 'img/safe.png');
+                }
+            }
+
+            setTimeout( function() {
+                if (safe!='セーフ！'){
+                    $('.msg').empty();
+                    $('.ret_img').attr('src', '');
+                } else if(safe!='アウト！'){
+                    firebase.database().ref().remove();
+                    $('ul').children().remove();
+                    $('.ret_img').attr('src', '');
+                }
+
+            }, 5000);
+        });
+
+    </script>
+
+</body>
+
+</html>
